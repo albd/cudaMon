@@ -10,7 +10,6 @@
 
 using namespace std;
 
-int pid, childpipe[2];
 
 void* childMonitor(void *arg)
 {
@@ -67,7 +66,7 @@ int main()
     while(1) {
         vector<task> reservation;
         string command, path;
-        int priority;
+        int priority, pid;
         cin>>command;
         if (command == "exit")
             return 0;
