@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <vector>
 #include <algorithm>
+#include <mutex>
 
 #define READ 0
 #define WRITE 1
@@ -41,6 +42,10 @@ class task {
         partition = 100;
         priority = pr;
         path = pa;
+        launch();
+    }
+    void launch()
+    {
         if (pid = fork()) { //parent
             pthread_create(&monitor, NULL, childMonitor, &(childpipe[READ]));
         } else { //child process
@@ -52,9 +57,19 @@ class task {
             execve(path.c_str(), NULL, environ);
         }
     }
-    int getpid()
+    void halve()
     {
-        return pid;
+        partition = partition/2;
+        relaunch();
+    }
+    void inc()
+    {
+        partition = min(100, partition+1);
+        relaunch();
+    }
+    void relaunch()
+    {
+
     }
     void print()
     {
@@ -69,9 +84,12 @@ class task {
 class reservation {
     private:
     vector<task> tasks;
+    mutex lock;
+
     public:
     void insert(task newTask)
     {
+        lock_guard<mutex> guard(lock);
         tasks.push_back(newTask);
         sort(tasks.begin(), tasks.end());
     }
@@ -80,6 +98,22 @@ class reservation {
         for(auto task: tasks) {
             task.print();
         }
+    }
+    void update(int pid)
+    {
+        lock_guard<mutex> guard(lock);
+        bool found = false;
+        for(auto task: tasks) {
+            if (!found) {
+                if(task.pid == pid) {
+                    found = true;
+                }
+            } else {
+                task.halve();
+            }
+            task.print();
+        }
+
     }
 
 } reserv;
