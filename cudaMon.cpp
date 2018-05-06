@@ -40,26 +40,28 @@ class task {
         partition = 100;
         priority = pr;
         path = pa;
-    }
-    void Monitor()
-    {
-        pthread_create(&monitor, NULL, childMonitor, &(childpipe[READ]));
-    }
-    void launch()
-    {
-        close(childpipe[READ]);
-        dup2(childpipe[WRITE], WRITE);
-        setenv("TESTENV", "parental control", 1);
-        //execve("../cudaKernel/cuda_kernel", NULL, environ);
-        cout<<"launching"<<path<<endl;
-        execve(path.c_str(), NULL, environ);
-
-    }
-    void setPid(int p)
-    {
-        pid = p;
+        if (pid = fork()) { //parent
+            pthread_create(&monitor, NULL, childMonitor, &(childpipe[READ]));
+        } else { //child process
+            close(childpipe[READ]);
+            dup2(childpipe[WRITE], WRITE);
+            setenv("TESTENV", "parental control", 1);
+            //execve("../cudaKernel/cuda_kernel", NULL, environ);
+            cout<<"launching"<<path<<endl;
+            execve(path.c_str(), NULL, environ);
+        }
     }
 };
+
+//class reservation {
+//    private:
+//    vector<task> tasks;
+//    public:
+//    void insert(task newTask) {
+//
+//    }
+//
+//}
 
 int main()
 {
@@ -72,12 +74,6 @@ int main()
             return 0;
         cin>>priority>>path;
         task newTask(priority, path);
-        if (pid = fork()) { //parent
-            newTask.setPid(pid);
-            newTask.Monitor();
-        } else { //child process
-            newTask.launch();
-        }
     }
 }
 
