@@ -49,6 +49,7 @@ class task {
     }
     void halve()
     {
+        cout<<"halving"<<endl;
         partition = partition/2;
         relaunch();
     }
@@ -84,35 +85,40 @@ class task {
 
 class reservation {
     private:
-    vector<task> tasks;
+    vector<task *> tasks;
     mutex lock;
 
     public:
-    void insert(task newTask)
+    void insert(task *newTask)
     {
         lock_guard<mutex> guard(lock);
         tasks.push_back(newTask);
-        sort(tasks.begin(), tasks.end());
+        //sort(tasks.begin(), tasks.end());
     }
     void print()
     {
         for(auto task: tasks) {
-            task.print();
+            task->print();
         }
     }
     void missed(int pid)
     {
+        cout<<"looking for"<<pid<<endl;
         lock_guard<mutex> guard(lock);
         bool found = false;
+        int i=0;
         for(auto task: tasks) {
+            cout<<i++;
+            task->print();
             if (!found) {
-                if(task.pid == pid) {
+                if(task->pid == pid) {
+                    cout<<"found"<<endl;
                     found = true;
                 }
             } else {
-                task.halve();
+                cout<<"halving"<<endl;
+                task->halve();
             }
-            task.print();
         }
 
     }
@@ -129,11 +135,12 @@ void* childMonitor(void *arg)
     char buffer[1024];
     while(1) {
         cout<<"before wait"<<endl;
-        fgets(buffer, 1024, fp);
-        cout<<buffer<<endl;
-        //cout<<"monitor sleeping"<<endl;
-        //sleep(10);
-        //reserv.missed
+        //fgets(buffer, 1024, fp);
+        //cout<<buffer<<endl;
+        cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"sleeping"<<endl;
+        sleep(10);
+        cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"awoke"<<endl;
+        reserv.missed(thisTask->pid);
     }
     return NULL;
 }
@@ -150,7 +157,7 @@ int main()
             reserv.print();
         } else if (com == "launch") {
             cin>>priority>>path;
-            task newTask(priority, path);
+            task *newTask = new task(priority, path);
             reserv.insert(newTask);
         }
 
