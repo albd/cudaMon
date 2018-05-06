@@ -6,6 +6,9 @@
 #include <vector>
 #include <algorithm>
 #include <mutex>
+#include <sys/types.h>
+#include <signal.h>
+#include "cudaMon.h"
 
 #define READ 0
 #define WRITE 1
@@ -13,20 +16,6 @@
 using namespace std;
 
 
-void* childMonitor(void *arg)
-{
-    cout<<"launched thread"<<endl;
-    int fd = *(int *)arg;
-    cout<<"got fd"<<fd<<endl;
-    FILE *fp = fdopen(fd, "r");
-    char buffer[1024];
-    while(1) {
-        cout<<"before wait"<<endl;
-        fgets(buffer, 1024, fp);
-        cout<<buffer<<endl;
-    }
-    return NULL;
-}
 
 class task {
     private:
@@ -35,6 +24,7 @@ class task {
     int priority;
     int partition;
     string path;
+    friend void* childMonitor(void *);
     public:
     int pid;
     task(int pr, string pa) {
@@ -47,7 +37,7 @@ class task {
     void launch()
     {
         if (pid = fork()) { //parent
-            pthread_create(&monitor, NULL, childMonitor, &(childpipe[READ]));
+            pthread_create(&monitor, NULL, childMonitor, this);
         } else { //child process
             close(childpipe[READ]);
             dup2(childpipe[WRITE], WRITE);
@@ -69,7 +59,18 @@ class task {
     }
     void relaunch()
     {
+        cout<<"sent kill to process"<<endl;
+        kill(pid, 9);
 
+        if (pid = fork()) { //parent
+        } else { //child process
+            close(childpipe[READ]);
+            dup2(childpipe[WRITE], WRITE);
+            setenv("TESTENV", "parental control", 1);
+            //execve("../cudaKernel/cuda_kernel", NULL, environ);
+            cout<<"launching"<<path<<endl;
+            execve(path.c_str(), NULL, environ);
+        }
     }
     void print()
     {
@@ -99,7 +100,7 @@ class reservation {
             task.print();
         }
     }
-    void update(int pid)
+    void missed(int pid)
     {
         lock_guard<mutex> guard(lock);
         bool found = false;
@@ -117,6 +118,25 @@ class reservation {
     }
 
 } reserv;
+
+void* childMonitor(void *arg)
+{
+    cout<<"launched thread"<<endl;
+    task *thisTask = (task *)arg;
+    int fd = thisTask->childpipe[READ];
+    cout<<"got fd"<<fd<<endl;
+    FILE *fp = fdopen(fd, "r");
+    char buffer[1024];
+    while(1) {
+        cout<<"before wait"<<endl;
+        fgets(buffer, 1024, fp);
+        cout<<buffer<<endl;
+        //cout<<"monitor sleeping"<<endl;
+        //sleep(10);
+        //reserv.missed
+    }
+    return NULL;
+}
 
 int main()
 {
