@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include "cudaMon.h"
+#include <string>
 
 #define READ 0
 #define WRITE 1
@@ -40,9 +41,8 @@ class task {
             pthread_create(&monitor, NULL, childMonitor, this);
         } else { //child process
             close(childpipe[READ]);
-            dup2(childpipe[WRITE], WRITE);
-            setenv("TESTENV", "parental control", 1);
-            //execve("../cudaKernel/cuda_kernel", NULL, environ);
+            dup2(childpipe[WRITE], 2);
+            setenv("CUDA_MPS_ACTIVE_THREAD_PERCENTAGE", "100", 1);
             cout<<"launching"<<path<<endl;
             execve(path.c_str(), NULL, environ);
         }
@@ -66,9 +66,8 @@ class task {
         if (pid = fork()) { //parent
         } else { //child process
             close(childpipe[READ]);
-            dup2(childpipe[WRITE], WRITE);
-            setenv("TESTENV", "parental control", 1);
-            //execve("../cudaKernel/cuda_kernel", NULL, environ);
+            dup2(childpipe[WRITE], 2);
+            setenv("CUDA_MPS_ACTIVE_THREAD_PERCENTAGE", to_string(partition).c_str(), 1);
             cout<<"launching"<<path<<endl;
             execve(path.c_str(), NULL, environ);
         }
@@ -135,11 +134,11 @@ void* childMonitor(void *arg)
     char buffer[1024];
     while(1) {
         cout<<"before wait"<<endl;
-        //fgets(buffer, 1024, fp);
-        //cout<<buffer<<endl;
-        cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"sleeping"<<endl;
-        sleep(10);
-        cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"awoke"<<endl;
+        fgets(buffer, 1024, fp);
+        cout<<buffer<<endl;
+        //cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"sleeping"<<endl;
+        //sleep(10);
+        //cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"awoke"<<endl;
         reserv.missed(thisTask->pid);
     }
     return NULL;
