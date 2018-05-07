@@ -145,14 +145,24 @@ void* childMonitor(void *arg)
     return NULL;
 }
 
+void help() {
+    cout<<"launch priority path \t launch a task"<<endl;
+    cout<<"exit \t\t\t exit cudaMon"<<endl;
+    cout<<"ls \t\t\t list all tasks launched"<<endl;
+    cout<<"help \t\t\t display this help text"<<endl;
+}
+
 int main()
 {
     while(1) {
         string com, path;
         int priority, pid;
+        cout<<">> ";
         cin>>com;
         if (com == "exit") {
             return 0;
+        } else if (com == "help") {
+            help();
         } else if (com == "ls") {
             reserv.print();
         } else if (com == "launch") {
