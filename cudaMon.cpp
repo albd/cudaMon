@@ -9,7 +9,10 @@
 #include <sys/types.h>
 #include <signal.h>
 #include "cudaMon.h"
-#include <string>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <time.h>
 
 #define READ 0
 #define WRITE 1
@@ -55,13 +58,16 @@ class task {
     }
     void inc()
     {
+	cout<<"incing"<<endl;
         partition = min(100, partition+1);
         relaunch();
     }
     void relaunch()
     {
-        cout<<"sent kill to process"<<endl;
-        kill(pid, 9);
+	int status;
+        //cout<<"sent kill to process"<<endl;
+        kill(pid, 2);
+	waitpid(pid, &status, 0);
 
         if (pid = fork()) { //parent
         } else { //child process
@@ -74,7 +80,7 @@ class task {
     }
     void print()
     {
-        cout<<priority<<'\t'<<pid<<'\t'<<path<<'\t'<<partition<<endl;
+        cout<<time(NULL)<<'\t'<<priority<<"\t\t"<<pid<<'\t'<<path<<'\t'<<partition<<endl;
     }
     bool operator<(const task& other) const
     {
@@ -96,22 +102,23 @@ class reservation {
     }
     void print()
     {
+	cout<<"time\t\tpriority\tpid\tpath\t\t\t\tpartition"<<endl;
         for(auto task: tasks) {
             task->print();
         }
     }
     void missed(int pid)
     {
-        cout<<"looking for"<<pid<<endl;
+        //cout<<"looking for"<<pid<<endl;
         lock_guard<mutex> guard(lock);
         bool found = false;
         int i=0;
         for(auto task: tasks) {
-            cout<<i++;
-            task->print();
+            //cout<<i++;
+            //task->print();
             if (!found) {
                 if(task->pid == pid) {
-                    cout<<"found"<<endl;
+                    //cout<<"found"<<endl;
                     found = true;
                 }
             } else {
@@ -119,6 +126,29 @@ class reservation {
                 task->halve();
             }
         }
+	print();
+
+    }
+    void inc(int pid)
+    {
+        //cout<<"looking for"<<pid<<endl;
+        lock_guard<mutex> guard(lock);
+        bool found = false;
+        int i=0;
+        for(auto task: tasks) {
+            //cout<<i++;
+            //task->print();
+            if (!found) {
+                if(task->pid == pid) {
+                    //cout<<"found"<<endl;
+                    found = true;
+                }
+            } else {
+                cout<<"incing"<<endl;
+                task->inc();
+            }
+        }
+	print();
 
     }
 
@@ -126,20 +156,23 @@ class reservation {
 
 void* childMonitor(void *arg)
 {
-    cout<<"launched thread"<<endl;
+    //cout<<"launched thread"<<endl;
     task *thisTask = (task *)arg;
     int fd = thisTask->childpipe[READ];
-    cout<<"got fd"<<fd<<endl;
+    //cout<<"got fd"<<fd<<endl;
     FILE *fp = fdopen(fd, "r");
     char buffer[1024];
     while(1) {
-        cout<<"before wait"<<endl;
+        //cout<<"before wait"<<endl;
         fgets(buffer, 1024, fp);
         cout<<buffer<<endl;
         //cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"sleeping"<<endl;
         //sleep(10);
         //cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"awoke"<<endl;
-        reserv.missed(thisTask->pid);
+	if(!strncmp(buffer, "miss", 4))
+		reserv.missed(thisTask->pid);
+	else
+		reserv.inc(thisTask->pid);
     }
     return NULL;
 }
