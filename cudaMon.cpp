@@ -25,12 +25,13 @@ class task {
     private:
     int childpipe[2];
     pthread_t monitor;
-    int priority;
     int partition;
     string path;
+    time_t lastUpdate = 0;
     friend void* childMonitor(void *);
     public:
     int pid;
+    int priority;
     task(int pr, string pa) {
         pipe(childpipe);
         partition = 100;
@@ -52,22 +53,31 @@ class task {
     }
     void halve()
     {
+	if ((time(NULL) - lastUpdate) < 5)
+		return;
         cout<<"halving"<<endl;
-        partition = partition/2;
+        partition = max(0, partition-10);
+	time(&lastUpdate);
         relaunch();
+	print();
     }
     void inc()
     {
+	if ((time(NULL) - lastUpdate) < 2)
+		return;
 	cout<<"incing"<<endl;
         partition = min(100, partition+1);
+	time(&lastUpdate);
         relaunch();
+	print();
     }
     void relaunch()
     {
 	int status;
-        //cout<<"sent kill to process"<<endl;
+        cout<<"sent kill to process "<<pid<<endl;
         kill(pid, 2);
 	waitpid(pid, &status, 0);
+        cout<<pid<<" killed"<<endl;
 
         if (pid = fork()) { //parent
         } else { //child process
@@ -80,7 +90,7 @@ class task {
     }
     void print()
     {
-        cout<<time(NULL)<<'\t'<<priority<<"\t\t"<<pid<<'\t'<<path<<'\t'<<partition<<endl;
+        cout<<time(NULL)<<'\t'<<priority<<"\t\t"<<pid<<'\t'<<partition<<'\t'<<path<<endl;
     }
     bool operator<(const task& other) const
     {
@@ -102,7 +112,7 @@ class reservation {
     }
     void print()
     {
-	cout<<"time\t\tpriority\tpid\tpath\t\t\t\tpartition"<<endl;
+	cout<<"time\t\tpriority\tpid\tpartition\tpath"<<endl;
         for(auto task: tasks) {
             task->print();
         }
@@ -121,12 +131,12 @@ class reservation {
                     //cout<<"found"<<endl;
                     found = true;
                 }
-            } else {
-                cout<<"halving"<<endl;
+            } else if (task->priority == 3) {
+                //cout<<"halving"<<endl;
                 task->halve();
             }
         }
-	print();
+	//print();
 
     }
     void inc(int pid)
@@ -143,12 +153,12 @@ class reservation {
                     //cout<<"found"<<endl;
                     found = true;
                 }
-            } else {
-                cout<<"incing"<<endl;
+            } else if (task->priority == 3) {
+                //cout<<"incing"<<endl;
                 task->inc();
             }
         }
-	print();
+	//print();
 
     }
 
@@ -165,13 +175,13 @@ void* childMonitor(void *arg)
     while(1) {
         //cout<<"before wait"<<endl;
         fgets(buffer, 1024, fp);
-        cout<<buffer<<endl;
+        //cout<<buffer<<endl;
         //cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"sleeping"<<endl;
         //sleep(10);
         //cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"awoke"<<endl;
 	if(!strncmp(buffer, "miss", 4))
 		reserv.missed(thisTask->pid);
-	else
+	else if(!strncmp(buffer, "pass", 4))
 		reserv.inc(thisTask->pid);
     }
     return NULL;
