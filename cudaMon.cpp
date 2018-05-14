@@ -28,6 +28,7 @@ class task {
     int partition;
     string path;
     time_t lastUpdate = 0;
+    bool halvePending = false;
     friend void* childMonitor(void *);
     public:
     int pid;
@@ -53,18 +54,25 @@ class task {
     }
     void halve()
     {
-	if ((time(NULL) - lastUpdate) < 5)
+	if ((time(NULL) - lastUpdate) < 2) {
+		halvePending = true;
 		return;
+	}
         cout<<"halving"<<endl;
         partition = max(0, partition-10);
 	time(&lastUpdate);
         relaunch();
+	halvePending = false;
 	print();
     }
     void inc()
     {
 	if ((time(NULL) - lastUpdate) < 2)
 		return;
+	if (halvePending) {
+		halve();
+		return;
+	}
 	cout<<"incing"<<endl;
         partition = min(100, partition+1);
 	time(&lastUpdate);
