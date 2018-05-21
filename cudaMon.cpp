@@ -13,6 +13,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <chrono>
+#include <thread>
 
 #define READ 0
 #define WRITE 1
@@ -27,7 +29,9 @@ class task {
     pthread_t monitor;
     int partition;
     string path;
-    time_t lastUpdate = 0;
+    time_t lastHalve = 0;
+    time_t lastInc = 0;
+    time_t firstLaunch = 0;
     bool halvePending = false;
     friend void* childMonitor(void *);
     public:
@@ -44,6 +48,7 @@ class task {
     {
         if (pid = fork()) { //parent
             pthread_create(&monitor, NULL, childMonitor, this);
+            time(&firstLaunch);
         } else { //child process
             close(childpipe[READ]);
             dup2(childpipe[WRITE], 2);
@@ -54,20 +59,23 @@ class task {
     }
     void halve()
     {
-	if ((time(NULL) - lastUpdate) < 2) {
-		halvePending = true;
+	//if ((time(NULL) - firstLaunch) < 5) {
+	//	return;
+	//}
+	if ((time(NULL) - lastHalve) < 1) {
+		//halvePending = true;
 		return;
 	}
         cout<<"halving"<<endl;
-        partition = max(0, partition-10);
-	time(&lastUpdate);
+        partition = max(0, partition/2);
+	time(&lastHalve);
         relaunch();
 	halvePending = false;
 	print();
     }
     void inc()
     {
-	if ((time(NULL) - lastUpdate) < 2)
+	if ((time(NULL) - lastInc) < 1)
 		return;
 	if (halvePending) {
 		halve();
@@ -75,7 +83,7 @@ class task {
 	}
 	cout<<"incing"<<endl;
         partition = min(100, partition+1);
-	time(&lastUpdate);
+	time(&lastInc);
         relaunch();
 	print();
     }
@@ -88,6 +96,7 @@ class task {
         cout<<pid<<" killed"<<endl;
 
         if (pid = fork()) { //parent
+		this_thread::sleep_for(chrono::milliseconds(50));
         } else { //child process
             close(childpipe[READ]);
             dup2(childpipe[WRITE], 2);
@@ -139,7 +148,7 @@ class reservation {
                     //cout<<"found"<<endl;
                     found = true;
                 }
-            } else if (task->priority == 3) {
+            } else if (task->priority > 3) {
                 //cout<<"halving"<<endl;
                 task->halve();
             }
@@ -161,7 +170,7 @@ class reservation {
                     //cout<<"found"<<endl;
                     found = true;
                 }
-            } else if (task->priority == 3) {
+            } else if (task->priority > 3) {
                 //cout<<"incing"<<endl;
                 task->inc();
             }
@@ -182,6 +191,7 @@ void* childMonitor(void *arg)
     char buffer[1024];
     while(1) {
         //cout<<"before wait"<<endl;
+	fseek(fp, 0, SEEK_END);
         fgets(buffer, 1024, fp);
         //cout<<buffer<<endl;
         //cout<<"monitor"<<thisTask<<" "<<thisTask->pid<<"sleeping"<<endl;
