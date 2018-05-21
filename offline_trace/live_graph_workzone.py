@@ -37,10 +37,10 @@ def animate(i):
         lane_change_graph = open('lanechange_trace','r').read()
         workzone_graph = open('workzone_trace','r').read()
         high_graph = open('high_trace','r').read()
-        low_graph = open('low_trace','r').read()
+        low_graph = open('high_trace','r').read()
         dnn_graph = open('dnn_trace','r').read()
         high_partition_graph = open('high_partition_trace','r').read()
-        low_partition_graph = open('low_partition_trace','r').read()
+        low_partition_graph = open('high_partition_trace','r').read()
 
 	start_time = int(lane_change_graph.split('\n')[0].split(' ')[0])
 
